@@ -1,7 +1,7 @@
 <template>
   <div class="relative min-h-screen bg-gray-50">
     <!-- 历史视频区域（全屏滚动） -->
-    <div class="pb-96 pt-8">
+    <div class="pb-[600px] pt-8">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- 日期标题 -->
         <h2 class="text-2xl font-bold text-gray-800 mb-6">今天</h2>
@@ -513,8 +513,8 @@ const error = ref('')
 const hoveredFrame = ref<'first' | 'last' | null>(null)
 let historyRefreshInterval: NodeJS.Timeout | null = null
 
-// 悬浮窗口状态 - 默认收缩
-const isBottomBarCollapsed = ref(true)
+// 悬浮窗口状态 - 默认展开（显示视频生成区域）
+const isBottomBarCollapsed = ref(false)
 const isInputFocused = ref(false)
 const isBottomEdgeHovered = ref(false)
 const isBottomBarHovered = ref(false)
