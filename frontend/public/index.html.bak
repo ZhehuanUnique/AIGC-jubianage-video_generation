@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>剧变时代</title>
+    <!-- Favicon（浏览器标签图标） -->
+    <link rel="icon" type="image/svg+xml" href="/logo/favicon.svg" />
+    <link rel="icon" type="image/png" href="/logo/favicon.png" />
+    <link rel="apple-touch-icon" href="/logo/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      /* 基础样式，确保即使外部 CSS 加载失败也能显示内容 */
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #070A12;
+        color: #EAF0FF;
+        min-height: 100vh;
+      }
+      .debug-info {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.8);
+        color: #fff;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 12px;
+        z-index: 9999;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 调试信息 -->
+    <div class="debug-info" id="debugInfo">
+      <div>CSS: <span id="cssStatus">加载中...</span></div>
+      <div>JS: <span id="jsStatus">加载中...</span></div>
+    </div>
+    <!-- 背景视频 -->
+    <video class="bg-video" autoplay muted loop playsinline preload="auto">
+      <source src="https://jubianage-1392491103.cos.ap-guangzhou.myqcloud.com/videos/index.mp4" type="video/mp4" />
+    </video>
+    
+    <main class="stage">
+      <!-- Logo + 标题（左上角） -->
+      <header class="header">
+        <img class="header__logo" src="/logo/logo.png" alt="剧变时代 Logo" onerror="this.style.display='none';" />
+        <span class="header__title">剧变时代</span>
+      </header>
+      
+      <section class="hero">
+        <h1 class="hero__title">剧变时代</h1>
+        <noscript>
+          <p style="color: #fff; text-align: center; padding: 20px;">
+            请启用 JavaScript 以查看完整内容
+          </p>
+        </noscript>
+      </section>
+
+      <section class="rail">
+        <div class="marquee" data-marquee aria-label="作品流动展示">
+                              <div class="marquee__track" data-marquee-track>
+            <!-- 只需要写一份 items，JS 会自动复制一份用于无缝循环 -->
+
+          </div>
+      </section>
+
+    </main>
+    <script>
+      // 页面加载完成后的初始化
+      (function() {
+        'use strict';
+        
+        // 检查资源加载状态
+        function checkResources() {
+          const debugInfo = document.getElementById('debugInfo');
+          if (!debugInfo) return;
+          
+          const cssStatus = document.getElementById('cssStatus');
+          const jsStatus = document.getElementById('jsStatus');
+          
+          // 检查 CSS 是否加载
+          try {
+            const testEl = document.createElement('div');
+            testEl.className = 'bg-video';
+            testEl.style.visibility = 'hidden';
+            testEl.style.position = 'absolute';
+            document.body.appendChild(testEl);
+            const styles = window.getComputedStyle(testEl);
+            const cssLoaded = styles.position === 'fixed' || styles.position === 'absolute';
+            document.body.removeChild(testEl);
+            
+            if (cssStatus) {
+              if (cssLoaded) {
+                cssStatus.textContent = '✓ 已加载';
+                cssStatus.style.color = '#4CAF50';
+              } else {
+                cssStatus.textContent = '✗ 加载失败';
+                cssStatus.style.color = '#f44336';
+                debugInfo.style.display = 'block';
+              }
+            }
+          } catch (e) {
+            if (cssStatus) {
+              cssStatus.textContent = '✗ 检查失败';
+              cssStatus.style.color = '#f44336';
+            }
+            debugInfo.style.display = 'block';
+          }
+          
+          // 检查 JS 是否加载（延迟检查，等待 main.js 加载）
+          setTimeout(function() {
+            if (jsStatus) {
+              if (typeof setupMarquee === 'function') {
+                jsStatus.textContent = '✓ 已加载';
+                jsStatus.style.color = '#4CAF50';
+              } else {
+                jsStatus.textContent = '✗ 加载失败';
+                jsStatus.style.color = '#f44336';
+                debugInfo.style.display = 'block';
+              }
+            }
+            
+            // 3秒后隐藏调试信息（如果一切正常）
+            if (cssStatus && cssStatus.textContent.includes('✓') && 
+                jsStatus && jsStatus.textContent.includes('✓')) {
+              setTimeout(function() {
+                if (debugInfo) debugInfo.style.display = 'none';
+              }, 3000);
+            }
+          }, 500);
+        }
+        
+        // 页面加载完成后检查
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', checkResources);
+        } else {
+          checkResources();
+        }
+        
+        // 捕获资源加载错误
+        window.addEventListener('error', function(e) {
+          // 忽略脚本错误（由 onerror 处理）
+          if (e.target && e.target.tagName === 'SCRIPT') {
+            return;
+          }
+          console.error('资源加载错误:', e);
+          const debugInfo = document.getElementById('debugInfo');
+          if (debugInfo) {
+            debugInfo.style.display = 'block';
+            const errorMsg = e.message || e.filename || '未知错误';
+            debugInfo.innerHTML += '<div style="color: #f44336; margin-top: 5px;">错误: ' + errorMsg + '</div>';
+          }
+        }, true);
+        
+        // 处理 main.js 加载失败
+        window.addEventListener('error', function(e) {
+          if (e.target && e.target.tagName === 'SCRIPT' && e.target.src) {
+            const jsStatus = document.getElementById('jsStatus');
+            const debugInfo = document.getElementById('debugInfo');
+            if (jsStatus) {
+              jsStatus.textContent = '✗ 加载失败';
+              jsStatus.style.color = '#f44336';
+            }
+            if (debugInfo) {
+              debugInfo.style.display = 'block';
+            }
+          }
+        }, true);
+      })();
+    </script>
+    <script src="/main.js" defer></script>
+  </body>
+</html>
+
+

@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+@layer components {
+  .input-area {
+    @apply w-full min-h-[400px] p-6 bg-white rounded-2xl border-2 border-dashed border-gray-200 
+           focus-within:border-primary-500 focus-within:bg-primary-50/30 transition-all;
+  }
+  
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg font-medium
+           hover:from-primary-600 hover:to-primary-700 active:scale-95 transition-all shadow-lg hover:shadow-xl;
+  }
+  
+  .btn-secondary {
+    @apply px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg
+           hover:bg-gray-50 active:scale-95 transition-all;
+  }
+
+  /* 首尾帧卡片悬停效果 */
+  .frame-card {
+    @apply transition-all duration-300;
+  }
+  
+  .frame-card:hover {
+    @apply transform -translate-y-2 shadow-lg;
+  }
+}
+

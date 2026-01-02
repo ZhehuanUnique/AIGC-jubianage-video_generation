@@ -1,0 +1,46 @@
+# 忽略不需要的文件和目录
+
+# 开发相关
+node_modules/
+.nuxt/
+.output/
+.DS_Store
+*.log
+
+# 测试文件
+test/
+*.test.*
+*.spec.*
+
+# 文档
+*.md
+!README.md
+
+# 环境变量
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 临时文件
+*.tmp
+*.temp
+.cache/
+
+# 构建产物（Vercel 会自动构建）
+dist/
+build/
+
+# 保留海报文件夹（需要部署）
+!public/poster/
+
+

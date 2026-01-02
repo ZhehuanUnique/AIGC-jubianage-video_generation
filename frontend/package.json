@@ -1,0 +1,27 @@
+{
+  "name": "jubianai-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@nuxtjs/tailwindcss": "^6.12.0",
+    "@pinia/nuxt": "^0.5.1",
+    "nuxt": "^3.11.0",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.15",
+    "vue-router": "^4.2.5"
+  },
+  "devDependencies": {
+    "@nuxt/typescript-build": "^3.0.2",
+    "typescript": "^5.3.3"
+  }
+}
+
+

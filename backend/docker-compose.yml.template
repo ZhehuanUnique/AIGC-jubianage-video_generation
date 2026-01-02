@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  jubianai-backend:
+    build: .
+    container_name: jubianai-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - VOLCENGINE_ACCESS_KEY_ID=${VOLCENGINE_ACCESS_KEY_ID}
+      - VOLCENGINE_SECRET_ACCESS_KEY=${VOLCENGINE_SECRET_ACCESS_KEY}
+      - JIMENG_API_ENDPOINT=${JIMENG_API_ENDPOINT:-https://visual.volcengineapi.com}
+      - SUPABASE_DB_URL=${SUPABASE_DB_URL}
+      - DEFAULT_API_KEY=${DEFAULT_API_KEY:-default_key}
+      - STORAGE_TYPE=${STORAGE_TYPE}
+      - ALIYUN_OSS_ACCESS_KEY_ID=${ALIYUN_OSS_ACCESS_KEY_ID}
+      - ALIYUN_OSS_ACCESS_KEY_SECRET=${ALIYUN_OSS_ACCESS_KEY_SECRET}
+      - ALIYUN_OSS_BUCKET_NAME=${ALIYUN_OSS_BUCKET_NAME}
+      - ALIYUN_OSS_ENDPOINT=${ALIYUN_OSS_ENDPOINT}
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
