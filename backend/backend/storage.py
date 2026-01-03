@@ -1,11 +1,12 @@
 """
 对象存储服务
-支持阿里云 OSS 和亚马逊 S3
+支持腾讯云 COS、阿里云 OSS 和亚马逊 S3
 """
 import os
 from typing import Optional
 from pathlib import Path
 import logging
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 class StorageService:
     """对象存储服务基类"""
     
-    def upload_video(self, video_url: str, video_name: str) -> Optional[str]:
+    async def upload_video(self, video_url: str, video_name: str) -> Optional[str]:
         """
         上传视频到对象存储
         
@@ -26,12 +27,74 @@ class StorageService:
         """
         raise NotImplementedError
     
-    def download_file(self, url: str) -> bytes:
+    async def download_file(self, url: str) -> bytes:
         """下载文件（用于上传到对象存储）"""
         async with httpx.AsyncClient() as client:
-            response = await client.get(url)
+            response = await client.get(url, timeout=300)
             response.raise_for_status()
             return response.content
+
+
+class TencentCOSStorage(StorageService):
+    """腾讯云 COS 存储服务"""
+    
+    def __init__(self):
+        from qcloud_cos import CosConfig
+        from qcloud_cos import CosS3Client
+        from qcloud_cos.cos_exception import CosClientError, CosServiceError
+        
+        self.secret_id = os.getenv("COS_SECRET_ID")
+        self.secret_key = os.getenv("COS_SECRET_KEY")
+        self.region = os.getenv("COS_REGION")  # 如: ap-guangzhou
+        self.bucket_name = os.getenv("COS_BUCKET")
+        self.bucket_domain = os.getenv("COS_BUCKET_DOMAIN")  # CDN域名（可选）
+        
+        if not all([self.secret_id, self.secret_key, self.region, self.bucket_name]):
+            raise ValueError("请配置腾讯云 COS 环境变量：COS_SECRET_ID, COS_SECRET_KEY, COS_REGION, COS_BUCKET")
+        
+        # 初始化 COS 配置
+        config = CosConfig(
+            Region=self.region,
+            SecretId=self.secret_id,
+            SecretKey=self.secret_key,
+            Scheme='https'  # 使用 HTTPS
+        )
+        
+        # 初始化 COS 客户端
+        self.cos_client = CosS3Client(config)
+    
+    async def upload_video(self, video_url: str, video_name: str) -> Optional[str]:
+        """上传视频到腾讯云 COS"""
+        try:
+            # 下载视频
+            import requests
+            response = requests.get(video_url, timeout=300)  # 5分钟超时
+            response.raise_for_status()
+            video_data = response.content
+            
+            # 上传到 COS（同步操作）
+            object_key = f"videos/{video_name}"
+            
+            # 上传文件
+            self.cos_client.put_object(
+                Bucket=self.bucket_name,
+                Body=video_data,
+                Key=object_key,
+                ContentType='video/mp4'
+            )
+            
+            # 返回 COS URL
+            if self.bucket_domain:
+                # 使用 CDN 域名
+                return f"https://{self.bucket_domain}/{object_key}"
+            else:
+                # 使用 COS 域名
+                # 格式: https://{bucket}.cos.{region}.myqcloud.com/{object_key}
+                return f"https://{self.bucket_name}.cos.{self.region}.myqcloud.com/{object_key}"
+                
+        except Exception as e:
+            logger.error(f"上传视频到腾讯云 COS 失败: {str(e)}")
+            return None
 
 
 class AliyunOSSStorage(StorageService):
@@ -136,10 +199,20 @@ def get_storage_service() -> Optional[StorageService]:
     """
     根据环境变量获取存储服务实例
     
-    优先使用阿里云 OSS，如果未配置则使用 S3
+    优先使用腾讯云 COS，如果未配置则尝试其他存储服务
     """
-    storage_type = os.getenv("STORAGE_TYPE", "aliyun_oss").lower()
+    storage_type = os.getenv("STORAGE_TYPE", "tencent_cos").lower()
     
+    # 优先使用腾讯云 COS
+    if storage_type == "tencent_cos" or storage_type == "cos":
+        try:
+            return TencentCOSStorage()
+        except ValueError as e:
+            logger.warning(f"腾讯云 COS 未配置: {e}")
+            # 如果未配置 COS，尝试其他存储服务
+            storage_type = "aliyun_oss"
+    
+    # 使用阿里云 OSS
     if storage_type == "aliyun_oss":
         try:
             return AliyunOSSStorage()
@@ -147,6 +220,7 @@ def get_storage_service() -> Optional[StorageService]:
             logger.warning("阿里云 OSS 未配置，尝试使用 S3")
             storage_type = "s3"
     
+    # 使用亚马逊 S3
     if storage_type == "s3":
         try:
             return S3Storage()

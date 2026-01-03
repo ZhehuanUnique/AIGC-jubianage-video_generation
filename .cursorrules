@@ -1,0 +1,50 @@
+# Cursor MCP 配置说明
+
+## MCP 服务器配置
+
+本项目已配置以下 MCP 服务器：
+
+### 1. Supabase MCP (supabase-jubianai)
+- Project Ref: sggdokxjqycskeybyqvv
+- Access Token: sbp_55d3bff12a73fad53040ea5b2db387d0d84a2e03
+
+### 2. Vercel MCP
+- Token: bUFnjiVqrAvBYZyTmED7Q9wl
+
+### 3. Render API
+- API Key: rnd_QtPtywDxKnQAUCABtvIwBiwf0lvX
+
+## 在 Cursor 中添加 MCP 服务器
+
+### 方法 1：通过 UI 添加（推荐）
+
+1. 打开 Cursor Settings
+2. 进入 **Tools & MCP** 页面
+3. 点击 **"New MCP Server"** 按钮
+4. 添加以下配置：
+
+#### Supabase MCP 配置：
+- **Name**: `supabase-jubianai`
+- **Command**: `cmd`
+- **Args**: `/c npx -y @supabase/mcp-server-supabase@latest --project-ref=sggdokxjqycskeybyqvv`
+- **Environment Variables**:
+  - `SUPABASE_ACCESS_TOKEN`: `sbp_55d3bff12a73fad53040ea5b2db387d0d84a2e03`
+
+#### Vercel MCP 配置：
+- **Name**: `vercel`
+- **Command**: `npx`
+- **Args**: `-y @robinson_ai_systems/vercel-mcp`
+- **Environment Variables**:
+  - `VERCEL_TOKEN`: `bUFnjiVqrAvBYZyTmED7Q9wl`
+
+### 方法 2：使用配置文件
+
+如果 Cursor 支持从项目根目录读取 `mcp.json`，配置文件已创建在项目根目录。
+
+## 数据库配置
+
+Supabase 数据库连接字符串：
+```
+postgresql://postgres.ogndfzxtzsifaqwzfojs:2003419519CFF@aws-1-ap-south-1.pooler.supabase.com:5432/postgres
+```
+

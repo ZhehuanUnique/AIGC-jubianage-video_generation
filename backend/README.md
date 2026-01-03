@@ -45,7 +45,7 @@ ALIYUN_OSS_BUCKET_NAME=your_bucket
 
 ```bash
 # 后端服务
-python -m uvicorn backend.api:app --host 0.0.0.0 --port 8000
+python -m uvicorn backend.api:app --host 0.0.0.0 --port 8001
 ```
 
 ---

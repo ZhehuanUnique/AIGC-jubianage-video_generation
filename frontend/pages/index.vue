@@ -176,7 +176,7 @@
             <div class="p-3">
               <p class="text-sm text-gray-700 line-clamp-2 mb-2">{{ video.prompt }}</p>
               <div class="flex items-center justify-between text-xs text-gray-500">
-                <span>视频 {{ video.version || '3.0' }} | {{ video.duration }}s | {{ getResolutionText(video) }}</span>
+                <span>视频 {{ video.version || '3.0pro' }} | {{ video.duration }}s | {{ getResolutionText(video) }}</span>
                 <span>{{ formatDate(video.created_at) }}</span>
               </div>
             </div>
@@ -360,11 +360,11 @@
                     videoVersion === ver
                       ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-sm'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-                    // 3.0 Pro 只支持 1080p 首帧，如果不符合条件则禁用
-                    ver === '3.0_pro' && (resolution !== '1080p' || !firstFrame || lastFrame) && 'opacity-50 cursor-not-allowed'
+                    // 3.5pro 只支持 1080p 首帧，如果不符合条件则禁用
+                    ver === '3.5pro' && (resolution !== '1080p' || !firstFrame || lastFrame) && 'opacity-50 cursor-not-allowed'
                   ]"
-                  :disabled="ver === '3.0_pro' && (resolution !== '1080p' || !firstFrame || lastFrame)"
-                  :title="ver === '3.0_pro' && (resolution !== '1080p' || !firstFrame || lastFrame) ? '3.0 Pro 只支持 1080p 首帧（不支持尾帧）' : ''"
+                  :disabled="ver === '3.5pro' && (resolution !== '1080p' || !firstFrame || lastFrame)"
+                  :title="ver === '3.5pro' && (resolution !== '1080p' || !firstFrame || lastFrame) ? '3.5pro 只支持 1080p 首帧（不支持尾帧）' : ''"
                 >
                   {{ ver }}
                 </button>
@@ -500,8 +500,8 @@ const duration = ref(5)
 const durations = [5, 10]
 const resolution = ref<'720p' | '1080p'>('720p')
 const resolutions: ('720p' | '1080p')[] = ['720p', '1080p']
-const videoVersion = ref<'3.0' | '3.0_pro'>('3.0')
-const videoVersions: ('3.0' | '3.0_pro')[] = ['3.0', '3.0_pro']
+const videoVersion = ref<'3.0pro' | '3.5pro'>('3.0pro')
+const videoVersions: ('3.0pro' | '3.5pro')[] = ['3.0pro', '3.5pro']
 const firstFrame = ref<File | null>(null)
 const lastFrame = ref<File | null>(null)
 const firstFramePreview = ref<string | null>(null)

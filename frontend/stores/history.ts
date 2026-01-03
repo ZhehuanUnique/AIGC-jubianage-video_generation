@@ -19,7 +19,7 @@ export interface VideoHistoryItem {
   is_favorite?: boolean
   is_liked?: boolean
   progress?: number // 进度百分比 (0-100)
-  version?: string // 版本信息：3.0 或 3.0_pro
+  version?: string // 版本信息：3.0pro 或 3.5pro
 }
 
 export interface VideoHistoryResponse {

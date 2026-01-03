@@ -17,7 +17,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (
     API_KEY, SEEDANCE_API_ENDPOINT, DEFAULT_VIDEO_SETTINGS,
     VOLCENGINE_ACCESS_KEY_ID, VOLCENGINE_SECRET_ACCESS_KEY, JIMENG_API_ENDPOINT,
-    JIMENG_VIDEO_VERSION, JIMENG_V30_REQ_KEYS, JIMENG_V30_PRO_REQ_KEYS
+    JIMENG_VIDEO_VERSION, JIMENG_V30_REQ_KEYS, JIMENG_V35_PRO_REQ_KEYS
 )
 from backend.assets_api import (
     upload_asset, get_assets_by_character, delete_asset, 
@@ -73,7 +73,7 @@ class VideoGenerationRequest(BaseModel):
     first_frame: Optional[str] = None  # 首帧图片（base64 或 URL）
     last_frame: Optional[str] = None  # 尾帧图片（base64 或 URL）
     resolution: Optional[str] = "720p"  # 分辨率：720p 或 1080p
-    version: Optional[str] = "3.0"  # 版本：3.0 或 3.0_pro
+    version: Optional[str] = "3.0pro"  # 版本：3.0pro 或 3.5pro
 
 
 class VideoGenerationResponse(BaseModel):
@@ -151,10 +151,10 @@ async def generate_video(
             pass
         
         # 调用即梦 API 生成视频
-        # 3.0 参考：
+        # 3.0pro 参考：
         #   720P: https://www.volcengine.com/docs/85621/1791184?lang=zh
         #   1080P: https://www.volcengine.com/docs/85621/1798092?lang=zh
-        # 3.0 Pro 参考：https://www.volcengine.com/docs/85621/1777001?lang=zh
+        # 3.5pro 参考：https://www.volcengine.com/docs/85621/1777001?lang=zh
         
         # 使用火山引擎 AK/SK 认证
         # 优先使用环境变量中的配置，如果没有则使用请求中的 api_key（兼容旧方式）
@@ -176,87 +176,73 @@ async def generate_video(
             )
         
         # 根据即梦 API 文档构建请求体
-        # 3.0 参考：
+        # 3.0pro 参考：
         #   720P: https://www.volcengine.com/docs/85621/1791184?lang=zh
         #   1080P-首帧: https://www.volcengine.com/docs/85621/1798092?lang=zh
         #   1080P-首尾帧: https://www.volcengine.com/docs/85621/1802721?lang=zh
-        # 3.0 Pro 参考：https://www.volcengine.com/docs/85621/1777001?lang=zh
-        # 注意：3.0 Pro 只支持 1080p 首帧功能
+        # 3.5pro 参考：https://www.volcengine.com/docs/85621/1777001?lang=zh
+        # 注意：3.5pro 只支持 1080p 首帧功能
         
         # 确定分辨率（默认720p）
         resolution = request.resolution or "720p"
         if resolution not in ["720p", "1080p"]:
             resolution = "720p"  # 默认使用720p
         
-        # 确定版本（从前端传入，默认3.0）
-        version = request.version or "3.0"
-        if version not in ["3.0", "3.0_pro"]:
-            version = "3.0"
+        # 确定版本（从前端传入，默认3.0pro）
+        version = request.version or "3.0pro"
+        if version not in ["3.0pro", "3.5pro"]:
+            version = "3.0pro"
         
-        # 验证 3.0 Pro 的限制：只支持 1080p 首帧（不支持尾帧）
-        if version == "3.0_pro":
+        # 验证 3.5pro 的限制：只支持 1080p 首帧（不支持尾帧）
+        if version == "3.5pro":
             if resolution != "1080p":
                 return VideoGenerationResponse(
                     success=False,
-                    message="3.0 Pro 只支持 1080p 分辨率",
-                    error="3.0 Pro 只支持 1080p 分辨率，请切换到 1080p 或使用 3.0 版本"
+                    message="3.5pro 只支持 1080p 分辨率",
+                    error="3.5pro 只支持 1080p 分辨率，请切换到 1080p 或使用 3.0pro 版本"
                 )
             if not request.first_frame:
                 return VideoGenerationResponse(
                     success=False,
-                    message="3.0 Pro 需要首帧图片",
-                    error="3.0 Pro 只支持首帧功能，请上传首帧图片或使用 3.0 版本"
+                    message="3.5pro 需要首帧图片",
+                    error="3.5pro 只支持首帧功能，请上传首帧图片或使用 3.0pro 版本"
                 )
             if request.last_frame:
                 return VideoGenerationResponse(
                     success=False,
-                    message="3.0 Pro 不支持尾帧",
-                    error="3.0 Pro 只支持首帧功能（不支持尾帧），请移除尾帧或使用 3.0 版本"
+                    message="3.5pro 不支持尾帧",
+                    error="3.5pro 只支持首帧功能（不支持尾帧），请移除尾帧或使用 3.0pro 版本"
                 )
         
         # 根据版本选择 req_key 映射
-        if version == "3.0_pro":
-            req_key_map = JIMENG_V30_PRO_REQ_KEYS
-            print(f"使用即梦AI 3.0 Pro版本")
+        if version == "3.5pro":
+            req_key_map = JIMENG_V35_PRO_REQ_KEYS
+            print(f"使用即梦AI 3.5pro版本")
         else:
             req_key_map = JIMENG_V30_REQ_KEYS
-            print(f"使用即梦AI 3.0版本")
+            print(f"使用即梦AI 3.0pro版本")
         
         # 确定 req_key：根据分辨率和是否有首尾帧选择不同的 req_key
+        # 支持两种模式：
+        # 1. 单首帧 + 提示词：只有 first_frame，使用 first_frame 的 req_key
+        # 2. 首尾帧 + 提示词：有 first_frame 和 last_frame，使用 first_last_frame 的 req_key
         resolution_keys = req_key_map.get(resolution, req_key_map["720p"])
         
         if request.first_frame and request.last_frame:
+            # 首尾帧模式
             req_key = resolution_keys["first_last_frame"]
+            mode = "首尾帧+提示词"
         elif request.first_frame:
+            # 单首帧模式
             req_key = resolution_keys["first_frame"]
+            mode = "单首帧+提示词"
         else:
-            # 没有首帧时，默认使用首帧接口
+            # 没有首帧时，使用纯文本模式（仅提示词）
             req_key = resolution_keys["first_frame"]
+            mode = "纯文本（仅提示词）"
         
-        print(f"选择的 req_key: {req_key} (版本: {version}, 分辨率: {resolution}, 首帧: {bool(request.first_frame)}, 尾帧: {bool(request.last_frame)})")
-        
-        # 构建图片 URL 数组（即梦 API 使用 image_urls，不是 base64）
-        image_urls = []
-        
-        # 处理首帧和尾帧
-        # 注意：即梦 API 需要图片 URL，如果传入的是 base64，需要先上传到对象存储或转换为 URL
-        # 这里暂时使用 base64 数据，实际使用时可能需要先上传图片获取 URL
-        if request.first_frame:
-            # TODO: 如果 first_frame 是 base64，需要先上传获取 URL
-            # 暂时假设是 URL 或需要处理
-            if request.first_frame.startswith("http"):
-                image_urls.append(request.first_frame)
-            else:
-                # base64 数据，需要转换为 URL 或使用 binary_data_base64
-                # 根据文档，可以使用 binary_data_base64 数组
-                pass
-        
-        if request.last_frame:
-            if request.last_frame.startswith("http"):
-                image_urls.append(request.last_frame)
-            else:
-                # base64 数据
-                pass
+        print(f"✅ 选择的模式: {mode}")
+        print(f"✅ req_key: {req_key} (版本: {version}, 分辨率: {resolution}, 首帧: {bool(request.first_frame)}, 尾帧: {bool(request.last_frame)})")
         
         # 根据即梦 API 文档构建请求体
         # 文档：https://www.volcengine.com/docs/85621/1785204?lang=zh
@@ -266,11 +252,16 @@ async def generate_video(
         }
         
         # 处理图片输入（二选一：binary_data_base64 或 image_urls）
+        # 支持两种模式：
+        # 1. 单首帧 + 提示词：只有 first_frame，使用 first_frame 的 req_key
+        # 2. 首尾帧 + 提示词：有 first_frame 和 last_frame，使用 first_last_frame 的 req_key
         binary_data_base64 = []
         image_urls = []
         
+        # 处理首帧（必选，当使用图片时）
         if request.first_frame:
             if request.first_frame.startswith("http"):
+                # URL 格式
                 image_urls.append(request.first_frame)
             else:
                 # base64 数据，移除 data:image/...;base64, 前缀
@@ -279,20 +270,29 @@ async def generate_video(
                     base64_data = base64_data.split(",")[1]
                 binary_data_base64.append(base64_data)
         
+        # 处理尾帧（可选，仅在首尾帧模式时使用）
         if request.last_frame:
             if request.last_frame.startswith("http"):
+                # URL 格式
                 image_urls.append(request.last_frame)
             else:
+                # base64 数据，移除 data:image/...;base64, 前缀
                 base64_data = request.last_frame
                 if "," in base64_data:
                     base64_data = base64_data.split(",")[1]
                 binary_data_base64.append(base64_data)
         
         # 根据文档，binary_data_base64 和 image_urls 二选一
+        # 只有当有图片数据时才添加到 payload
         if binary_data_base64:
             api_payload["binary_data_base64"] = binary_data_base64
+            print(f"✅ 使用 binary_data_base64，包含 {len(binary_data_base64)} 张图片")
         elif image_urls:
             api_payload["image_urls"] = image_urls
+            print(f"✅ 使用 image_urls，包含 {len(image_urls)} 张图片")
+        else:
+            # 纯文本模式（仅提示词，无图片）
+            print(f"✅ 纯文本模式，无图片数据")
         
         # 计算 frames（总帧数）
         # 根据文档：frames = 24 * n + 1，支持 5秒(121帧) 和 10秒(241帧)
@@ -586,7 +586,7 @@ async def get_video_status(task_id: str):
         
         visual_service = create_visual_service(volc_access_key, volc_secret_key)
         
-        # 尝试不同的 req_key（可能是首帧或首尾帧，720P或1080P，3.0或3.0 Pro）
+        # 尝试不同的 req_key（可能是首帧或首尾帧，720P或1080P，3.0pro或3.5pro）
         # 优先使用数据库中保存的 req_key
         req_keys = []
         
@@ -604,13 +604,13 @@ async def get_video_status(task_id: str):
         except Exception as e:
             print(f"⚠️ 获取保存的 req_key 失败: {str(e)}")
         
-        # 3.0 Pro 的 req_key（只有 1080p 首帧）
-        if JIMENG_VIDEO_VERSION == "3.0_pro":
-            pro_req_key = JIMENG_V30_PRO_REQ_KEYS["1080p"]["first_frame"]
+        # 3.5pro 的 req_key（只有 1080p 首帧）
+        if JIMENG_VIDEO_VERSION == "3.5pro":
+            pro_req_key = JIMENG_V35_PRO_REQ_KEYS["1080p"]["first_frame"]
             if pro_req_key not in req_keys:
                 req_keys.append(pro_req_key)
         
-        # 3.0 版本的所有 req_key（兼容旧任务和所有场景）
+        # 3.0pro 版本的所有 req_key（兼容旧任务和所有场景）
         all_v30_keys = [
             JIMENG_V30_REQ_KEYS["720p"]["first_frame"],
             JIMENG_V30_REQ_KEYS["720p"]["first_last_frame"],

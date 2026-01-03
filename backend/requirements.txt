@@ -16,8 +16,9 @@ sqlalchemy>=2.0.0  # ORM
 supabase>=2.0.0  # Supabase Python 客户端
 
 # 对象存储
-oss2>=2.18.0  # 阿里云 OSS
-boto3>=1.28.0  # 亚马逊 S3
+cos-python-sdk-v5>=1.9.24  # 腾讯云 COS
+oss2>=2.18.0  # 阿里云 OSS（可选）
+boto3>=1.28.0  # 亚马逊 S3（可选）
 
 # 注意：RAG 相关依赖（opencv-python, sentence-transformers, chromadb）已移除
 # 因为 RAG 服务不需要在 Render 后端运行，可以单独部署

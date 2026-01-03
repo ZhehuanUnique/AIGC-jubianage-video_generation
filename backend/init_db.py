@@ -14,11 +14,19 @@ from backend.database import init_db, engine
 from backend.models import Base
 
 if __name__ == "__main__":
+    # 设置 Windows 控制台编码为 UTF-8
+    if sys.platform == 'win32':
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+    
     print("正在初始化数据库...")
     try:
         init_db()
-        print("✅ 数据库表创建成功！")
+        print("[SUCCESS] 数据库表创建成功！")
     except Exception as e:
-        print(f"❌ 数据库初始化失败: {e}")
+        print(f"[ERROR] 数据库初始化失败: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
 

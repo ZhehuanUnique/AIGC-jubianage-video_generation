@@ -42,15 +42,15 @@ if SUPABASE_DB_URL:
             from sqlalchemy import text
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
-            print("✅ 数据库连接成功")
+            print("[SUCCESS] 数据库连接成功")
         except Exception as test_error:
             error_msg = str(test_error)
-            print(f"❌ 数据库连接测试失败: {error_msg}")
+            print(f"[ERROR] 数据库连接测试失败: {error_msg}")
             
             # 检查是否是 IPv6 连接问题
             if "Network is unreachable" in error_msg or "IPv6" in error_msg or "2406:" in error_msg:
-                print("⚠️ 检测到 IPv6 连接问题")
-                print("💡 解决方案：请使用 Supabase Connection Pooling URL（端口 6543）")
+                print("[WARN] 检测到 IPv6 连接问题")
+                print("[INFO] 解决方案：请使用 Supabase Connection Pooling URL（端口 6543）")
                 print("   在 Supabase Dashboard → Settings → Database → Connection Pooling")
                 print("   复制 Connection String（使用端口 6543 的那个）")
                 print("   然后在 Render Dashboard 中更新 SUPABASE_DB_URL 环境变量")
