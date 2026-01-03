@@ -186,7 +186,7 @@ const filters = ref({
   timeRange: 'all' as 'all' | 'week' | 'month' | 'quarter' | 'custom',
   startDate: '',
   endDate: '',
-  videoType: 'all' as 'all' | 'personal',
+  videoType: 'all' as 'all' | 'group' | 'personal',
   operationType: 'all' as 'all' | 'ultra_hd' | 'favorite' | 'liked'
 })
 
@@ -199,13 +199,14 @@ const timeOptions = [
 
 const videoTypeOptions = [
   { label: '全部', value: 'all' },
+  { label: '小组', value: 'group' },
   { label: '个人', value: 'personal' }
 ]
 
 const operationTypeOptions = [
   { label: '全部', value: 'all' },
   { label: '已超清', value: 'ultra_hd' },
-  { label: '收藏', value: 'favorite' },
+  { label: '已收藏', value: 'favorite' },
   { label: '已点赞', value: 'liked' }
 ]
 

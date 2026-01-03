@@ -33,7 +33,7 @@ export interface HistoryFilters {
   timeRange?: 'all' | 'week' | 'month' | 'quarter' | 'custom'
   startDate?: string
   endDate?: string
-  videoType?: 'all' | 'personal'
+  videoType?: 'all' | 'group' | 'personal'
   operationType?: 'all' | 'ultra_hd' | 'favorite' | 'liked'
   status?: 'pending' | 'processing' | 'completed' | 'failed'
 }

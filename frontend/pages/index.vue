@@ -470,7 +470,7 @@ const filters = ref({
   timeRange: 'all' as 'all' | 'week' | 'month' | 'quarter' | 'custom',
   startDate: '',
   endDate: '',
-  videoType: 'all' as 'all' | 'personal',
+  videoType: 'all' as 'all' | 'group' | 'personal',
   operationType: 'all' as 'all' | 'ultra_hd' | 'favorite' | 'liked'
 })
 
