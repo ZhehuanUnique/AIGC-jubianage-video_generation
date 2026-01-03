@@ -471,7 +471,7 @@ const filters = ref({
   startDate: '',
   endDate: '',
   videoType: 'all' as 'all' | 'group' | 'personal',
-  operationType: 'all' as 'all' | 'ultra_hd' | 'favorite' | 'liked'
+  operationType: 'all' as 'all' | 'ultra_hd' | 'fps_enhanced' | 'favorite' | 'liked'
 })
 
 // 监听筛选更新事件

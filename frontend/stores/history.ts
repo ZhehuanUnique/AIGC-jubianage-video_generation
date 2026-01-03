@@ -34,7 +34,7 @@ export interface HistoryFilters {
   startDate?: string
   endDate?: string
   videoType?: 'all' | 'group' | 'personal'
-  operationType?: 'all' | 'ultra_hd' | 'favorite' | 'liked'
+  operationType?: 'all' | 'ultra_hd' | 'fps_enhanced' | 'favorite' | 'liked'
   status?: 'pending' | 'processing' | 'completed' | 'failed'
 }
 
@@ -180,7 +180,12 @@ export const useHistoryStore = defineStore('history', {
       if (filters.operationType && filters.operationType !== 'all') {
         switch (filters.operationType) {
           case 'ultra_hd':
+            // 只展示使用了超分辨率技术的视频
             filtered = filtered.filter(v => v.is_ultra_hd === true)
+            break
+          case 'fps_enhanced':
+            // 只展示使用了补帧技术的视频（超帧率，24->60）
+            filtered = filtered.filter(v => v.fps > 24)
             break
           case 'favorite':
             filtered = filtered.filter(v => v.is_favorite === true)

@@ -187,7 +187,7 @@ const filters = ref({
   startDate: '',
   endDate: '',
   videoType: 'all' as 'all' | 'group' | 'personal',
-  operationType: 'all' as 'all' | 'ultra_hd' | 'favorite' | 'liked'
+  operationType: 'all' as 'all' | 'ultra_hd' | 'fps_enhanced' | 'favorite' | 'liked'
 })
 
 const timeOptions = [
@@ -206,6 +206,7 @@ const videoTypeOptions = [
 const operationTypeOptions = [
   { label: '全部', value: 'all' },
   { label: '已超清', value: 'ultra_hd' },
+  { label: '已补帧', value: 'fps_enhanced' },
   { label: '已收藏', value: 'favorite' },
   { label: '已点赞', value: 'liked' }
 ]
