@@ -49,17 +49,46 @@ extra_origins = os.getenv("CORS_ORIGINS", "").split(",")
 if extra_origins and extra_origins[0]:
     allowed_origins.extend([origin.strip() for origin in extra_origins if origin.strip()])
 
-# 使用 FastAPI 的 CORSMiddleware，支持正则表达式匹配 Vercel 域名
-# 注意：FastAPI 的 CORSMiddleware 支持 allow_origin_regex 参数
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",  # 允许所有 Vercel 域名（包括预览域名）
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
+# 使用自定义 CORS 中间件，确保正确添加 CORS 头
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
+import re
+
+class CORSMiddlewareCustom(BaseHTTPMiddleware):
+    """自定义 CORS 中间件，确保正确添加 CORS 头"""
+    def __init__(self, app):
+        super().__init__(app)
+        self.vercel_pattern = re.compile(r'^https://.*\.vercel\.app$')
+    
+    async def dispatch(self, request: Request, call_next):
+        origin = request.headers.get("origin")
+        
+        # 处理 OPTIONS 预检请求
+        if request.method == "OPTIONS":
+            response = Response()
+            if origin and (origin in allowed_origins or self.vercel_pattern.match(origin)):
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+                response.headers["Access-Control-Allow-Headers"] = "*"
+            return response
+        
+        # 处理实际请求
+        response = await call_next(request)
+        
+        # 添加 CORS 头
+        if origin:
+            if origin in allowed_origins or self.vercel_pattern.match(origin):
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+                response.headers["Access-Control-Allow-Headers"] = "*"
+                response.headers["Access-Control-Expose-Headers"] = "*"
+        
+        return response
+
+app.add_middleware(CORSMiddlewareCustom)
 
 
 class VideoGenerationRequest(BaseModel):
