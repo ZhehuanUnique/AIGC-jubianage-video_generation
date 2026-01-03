@@ -123,19 +123,18 @@ export const useHistoryStore = defineStore('history', {
       } catch (error: any) {
         console.error('获取历史记录失败:', error)
         this.error = error.message || '获取历史记录失败'
-        // 即使失败也设置空数组，避免显示错误
+        // 即使失败也设置空数组，显示"暂无历史记录"而不是错误
         this.videos = []
         this.total = 0
         // 首次加载失败后，也标记为非首次加载，避免一直显示加载状态
         if (this.isInitialLoad) {
           this.isInitialLoad = false
         }
-        throw error
+        // 不抛出错误，让前端正常显示"暂无历史记录"
+        // throw error
       } finally {
-        // 只在首次加载或非静默模式时更新加载状态
-        if (this.isInitialLoad || !params.silent) {
-          this.loading = false
-        }
+        // 确保加载状态被清除
+        this.loading = false
       }
     },
 

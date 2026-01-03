@@ -41,7 +41,7 @@ allowed_origins = [
     "https://www.jubianai.cn",
     "https://jubianai.cn",
     "https://aigc-jubianage.vercel.app",
-    "https://*.vercel.app",  # Vercel 预览域名
+    "https://aigc-jubianage-video-generation.vercel.app",  # Vercel 生产环境
 ]
 
 # 从环境变量读取额外的允许源
@@ -53,6 +53,7 @@ if extra_origins and extra_origins[0]:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # 允许所有 Vercel 域名（包括预览域名）
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
