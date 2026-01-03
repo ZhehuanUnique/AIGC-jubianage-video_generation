@@ -45,11 +45,12 @@ allowed_origins = [
 ]
 
 # 从环境变量读取额外的允许源
-import os
 extra_origins = os.getenv("CORS_ORIGINS", "").split(",")
 if extra_origins and extra_origins[0]:
     allowed_origins.extend([origin.strip() for origin in extra_origins if origin.strip()])
 
+# 使用 FastAPI 的 CORSMiddleware，支持正则表达式匹配 Vercel 域名
+# 注意：FastAPI 的 CORSMiddleware 支持 allow_origin_regex 参数
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
