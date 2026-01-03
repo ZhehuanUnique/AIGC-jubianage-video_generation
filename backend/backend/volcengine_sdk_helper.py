@@ -89,15 +89,49 @@ def submit_video_task(
         print(f"[DEBUG] 图片数据: binary_data_base64={bool(params.get('binary_data_base64'))}, image_urls={bool(params.get('image_urls'))}")
         if params.get("binary_data_base64"):
             print(f"[DEBUG] binary_data_base64 数量: {len(params['binary_data_base64'])}, 第一张长度: {len(params['binary_data_base64'][0]) if params['binary_data_base64'] else 0}")
+            # 打印前100个字符用于调试
+            print(f"[DEBUG] binary_data_base64[0] 前100字符: {params['binary_data_base64'][0][:100]}")
         
-        response = service.cv_sync2async_submit_task(params)
-        return response
+        # 尝试使用 cv_sync2async_submit_task 方法
+        # 注意：根据火山引擎 SDK 文档，binary_data_base64 应该是字符串列表
+        # 但如果 SDK 内部需要 JSON 序列化，可能需要特殊处理
+        try:
+            # 先尝试直接调用
+            response = service.cv_sync2async_submit_task(params)
+            return response
+        except Exception as e1:
+            error_msg1 = str(e1)
+            print(f"[WARN] cv_sync2async_submit_task 失败: {error_msg1}")
+            
+            # 如果失败，尝试使用 cv_json_api（可能需要 JSON 格式）
+            try:
+                print(f"[DEBUG] 尝试使用 cv_json_api 方法...")
+                # cv_json_api 可能需要 JSON 字符串格式
+                json_params = json.dumps(params, ensure_ascii=False)
+                response = service.cv_json_api(json_params)
+                return response
+            except Exception as e2:
+                error_msg2 = str(e2)
+                print(f"[ERROR] cv_json_api 也失败: {error_msg2}")
+                
+                # 如果还失败，尝试使用 cv_process
+                try:
+                    print(f"[DEBUG] 尝试使用 cv_process 方法...")
+                    response = service.cv_process(params)
+                    return response
+                except Exception as e3:
+                    error_msg3 = str(e3)
+                    print(f"[ERROR] cv_process 也失败: {error_msg3}")
+                    # 如果都失败，抛出原始错误
+                    raise e1
     except Exception as e:
         error_msg = str(e)
         print(f"[ERROR] SDK 调用失败: {error_msg}")
+        # 打印完整的参数用于调试
+        print(f"[DEBUG] 完整参数: {json.dumps({k: (v[:100] + '...' if isinstance(v, str) and len(v) > 100 else v) if k != 'binary_data_base64' else (f'[{len(v)} items, first: {v[0][:50]}...]' if isinstance(v, list) and len(v) > 0 else v) for k, v in params.items()}, ensure_ascii=False, indent=2)}")
         # 如果是解析错误，提供更详细的错误信息
-        if "parsing" in error_msg.lower() or "parse" in error_msg.lower():
-            raise Exception(f"调用即梦 API 失败: 请求参数解析错误 - {error_msg}。请检查 binary_data_base64 格式是否正确（应为base64字符串列表）")
+        if "parsing" in error_msg.lower() or "parse" in error_msg.lower() or "Error when parsing request" in error_msg:
+            raise Exception(f"调用即梦 API 失败: 请求参数解析错误 - {error_msg}。请检查 binary_data_base64 格式是否正确（应为base64字符串列表）。如果问题持续，请检查 SDK 版本和文档。")
         raise Exception(f"调用即梦 API 失败: {error_msg}")
 
 
