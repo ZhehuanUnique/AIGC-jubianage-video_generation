@@ -17,7 +17,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (
     API_KEY, SEEDANCE_API_ENDPOINT, DEFAULT_VIDEO_SETTINGS,
     VOLCENGINE_ACCESS_KEY_ID, VOLCENGINE_SECRET_ACCESS_KEY, JIMENG_API_ENDPOINT,
-    JIMENG_VIDEO_VERSION, JIMENG_V30_REQ_KEYS, JIMENG_V35_PRO_REQ_KEYS
+    JIMENG_VIDEO_VERSION, JIMENG_V35_PRO_REQ_KEYS
 )
 from backend.assets_api import (
     upload_asset, get_assets_by_character, delete_asset, 
@@ -103,8 +103,8 @@ class VideoGenerationRequest(BaseModel):
     api_key: Optional[str] = None  # 前端传入的 API Key
     first_frame: Optional[str] = None  # 首帧图片（base64 或 URL）
     last_frame: Optional[str] = None  # 尾帧图片（base64 或 URL）
-    resolution: Optional[str] = "720p"  # 分辨率：720p 或 1080p
-    version: Optional[str] = "3.0pro"  # 版本：3.0pro 或 3.5pro
+    resolution: Optional[str] = "1080p"  # 分辨率：仅支持 1080p（3.5pro要求）
+    version: Optional[str] = "3.5pro"  # 版本：仅支持 3.5pro
 
 
 class VideoGenerationResponse(BaseModel):
@@ -181,10 +181,7 @@ async def generate_video(
             print(f"RAG 增强失败，使用原始提示词: {e}")
             pass
         
-        # 调用即梦 API 生成视频
-        # 3.0pro 参考：
-        #   720P: https://www.volcengine.com/docs/85621/1791184?lang=zh
-        #   1080P: https://www.volcengine.com/docs/85621/1798092?lang=zh
+        # 调用即梦 API 生成视频（仅支持 3.5pro）
         # 3.5pro 参考：https://www.volcengine.com/docs/85621/1777001?lang=zh
         
         # 使用火山引擎 AK/SK 认证
@@ -206,71 +203,54 @@ async def generate_video(
                 error="请设置环境变量 VOLCENGINE_SECRET_ACCESS_KEY"
             )
         
-        # 根据即梦 API 文档构建请求体
-        # 3.0pro 参考：
-        #   720P: https://www.volcengine.com/docs/85621/1791184?lang=zh
-        #   1080P-首帧: https://www.volcengine.com/docs/85621/1798092?lang=zh
-        #   1080P-首尾帧: https://www.volcengine.com/docs/85621/1802721?lang=zh
+        # 根据即梦 API 文档构建请求体（仅支持 3.5pro）
         # 3.5pro 参考：https://www.volcengine.com/docs/85621/1777001?lang=zh
-        # 注意：3.5pro 只支持 1080p 首帧功能
+        # 注意：3.5pro 只支持 1080p 首帧功能（不支持尾帧和720p）
         
-        # 确定分辨率（默认720p）
-        resolution = request.resolution or "720p"
-        if resolution not in ["720p", "1080p"]:
-            resolution = "720p"  # 默认使用720p
+        # 确定分辨率（仅支持1080p）
+        resolution = request.resolution or "1080p"
+        if resolution != "1080p":
+            return VideoGenerationResponse(
+                success=False,
+                message="仅支持 1080p 分辨率",
+                error="当前版本仅支持 1080p 分辨率，请切换到 1080p"
+            )
         
-        # 确定版本（从前端传入，默认3.0pro）
-        version = request.version or "3.0pro"
-        if version not in ["3.0pro", "3.5pro"]:
-            version = "3.0pro"
+        # 确定版本（仅支持3.5pro）
+        version = request.version or "3.5pro"
+        if version != "3.5pro":
+            version = "3.5pro"  # 强制使用3.5pro
         
         # 验证 3.5pro 的限制：只支持 1080p 首帧（不支持尾帧）
-        if version == "3.5pro":
-            if resolution != "1080p":
-                return VideoGenerationResponse(
-                    success=False,
-                    message="3.5pro 只支持 1080p 分辨率",
-                    error="3.5pro 只支持 1080p 分辨率，请切换到 1080p 或使用 3.0pro 版本"
-                )
-            if not request.first_frame:
-                return VideoGenerationResponse(
-                    success=False,
-                    message="3.5pro 需要首帧图片",
-                    error="3.5pro 只支持首帧功能，请上传首帧图片或使用 3.0pro 版本"
-                )
-            if request.last_frame:
-                return VideoGenerationResponse(
-                    success=False,
-                    message="3.5pro 不支持尾帧",
-                    error="3.5pro 只支持首帧功能（不支持尾帧），请移除尾帧或使用 3.0pro 版本"
-                )
+        if not request.first_frame:
+            return VideoGenerationResponse(
+                success=False,
+                message="需要首帧图片",
+                error="请上传首帧图片"
+            )
+        if request.last_frame:
+            return VideoGenerationResponse(
+                success=False,
+                message="不支持尾帧",
+                error="当前版本不支持尾帧功能，请移除尾帧图片"
+            )
         
-        # 根据版本选择 req_key 映射
-        if version == "3.5pro":
-            req_key_map = JIMENG_V35_PRO_REQ_KEYS
-            print(f"使用即梦AI 3.5pro版本")
-        else:
-            req_key_map = JIMENG_V30_REQ_KEYS
-            print(f"使用即梦AI 3.0pro版本")
+        # 使用 3.5pro 的 req_key 映射
+        req_key_map = JIMENG_V35_PRO_REQ_KEYS
+        print(f"使用即梦AI 3.5pro版本")
         
-        # 确定 req_key：根据分辨率和是否有首尾帧选择不同的 req_key
-        # 支持两种模式：
-        # 1. 单首帧 + 提示词：只有 first_frame，使用 first_frame 的 req_key
-        # 2. 首尾帧 + 提示词：有 first_frame 和 last_frame，使用 first_last_frame 的 req_key
-        resolution_keys = req_key_map.get(resolution, req_key_map["720p"])
+        # 确定 req_key：3.5pro 只支持 1080p 首帧
+        resolution_keys = req_key_map.get("1080p")
+        if not resolution_keys:
+            return VideoGenerationResponse(
+                success=False,
+                message="配置错误",
+                error="3.5pro 1080p 配置缺失"
+            )
         
-        if request.first_frame and request.last_frame:
-            # 首尾帧模式
-            req_key = resolution_keys["first_last_frame"]
-            mode = "首尾帧+提示词"
-        elif request.first_frame:
-            # 单首帧模式
-            req_key = resolution_keys["first_frame"]
-            mode = "单首帧+提示词"
-        else:
-            # 没有首帧时，使用纯文本模式（仅提示词）
-            req_key = resolution_keys["first_frame"]
-            mode = "纯文本（仅提示词）"
+        # 3.5pro 只支持首帧模式
+        req_key = resolution_keys["first_frame"]
+        mode = "单首帧+提示词"
         
         print(f"✅ 选择的模式: {mode}")
         print(f"✅ req_key: {req_key} (版本: {version}, 分辨率: {resolution}, 首帧: {bool(request.first_frame)}, 尾帧: {bool(request.last_frame)})")
@@ -299,19 +279,19 @@ async def generate_video(
                 base64_data = request.first_frame
                 if "," in base64_data:
                     base64_data = base64_data.split(",")[1]
+                # 验证 base64 数据格式
+                if not base64_data or len(base64_data) < 100:
+                    return VideoGenerationResponse(
+                        success=False,
+                        message="首帧图片数据无效",
+                        error="首帧图片 base64 数据格式不正确或数据过短"
+                    )
+                # 确保 base64 数据是纯字符串（移除可能的换行符和空格）
+                base64_data = base64_data.strip().replace("\n", "").replace("\r", "").replace(" ", "")
                 binary_data_base64.append(base64_data)
         
-        # 处理尾帧（可选，仅在首尾帧模式时使用）
-        if request.last_frame:
-            if request.last_frame.startswith("http"):
-                # URL 格式
-                image_urls.append(request.last_frame)
-            else:
-                # base64 数据，移除 data:image/...;base64, 前缀
-                base64_data = request.last_frame
-                if "," in base64_data:
-                    base64_data = base64_data.split(",")[1]
-                binary_data_base64.append(base64_data)
+        # 3.5pro 不支持尾帧，如果传入了尾帧会在前面验证时返回错误
+        # 这里不再处理尾帧
         
         # 根据文档，binary_data_base64 和 image_urls 二选一
         # 只有当有图片数据时才添加到 payload
@@ -357,12 +337,39 @@ async def generate_video(
             image_urls_list = image_urls if image_urls else None
             binary_data_list = binary_data_base64 if binary_data_base64 else None
             
+            # 验证 binary_data_base64 格式
+            if binary_data_list:
+                if not isinstance(binary_data_list, list):
+                    return VideoGenerationResponse(
+                        success=False,
+                        message="图片数据格式错误",
+                        error="binary_data_base64 必须是列表格式"
+                    )
+                if len(binary_data_list) == 0:
+                    return VideoGenerationResponse(
+                        success=False,
+                        message="图片数据为空",
+                        error="binary_data_base64 列表为空"
+                    )
+                # 确保所有元素都是字符串
+                for i, data in enumerate(binary_data_list):
+                    if not isinstance(data, str):
+                        binary_data_list[i] = str(data)
+                    if len(data) < 100:
+                        return VideoGenerationResponse(
+                            success=False,
+                            message="图片数据无效",
+                            error=f"第 {i+1} 张图片的 base64 数据过短或无效"
+                        )
+            
             print(f"📤 准备提交视频生成任务:")
             print(f"  - req_key: {req_key}")
             print(f"  - prompt: {enhanced_prompt[:50]}...")
             print(f"  - frames: {frames}")
             print(f"  - 有首帧: {bool(binary_data_list or image_urls_list)}")
-            print(f"  - 首帧数据长度: {len(binary_data_list[0]) if binary_data_list and len(binary_data_list) > 0 else 0}")
+            if binary_data_list and len(binary_data_list) > 0:
+                print(f"  - 首帧数据长度: {len(binary_data_list[0])}")
+                print(f"  - 首帧数据前50字符: {binary_data_list[0][:50]}...")
             
             # 调用官方 SDK 提交任务
             api_result = submit_video_task(
@@ -636,21 +643,9 @@ async def get_video_status(task_id: str):
             print(f"⚠️ 获取保存的 req_key 失败: {str(e)}")
         
         # 3.5pro 的 req_key（只有 1080p 首帧）
-        if JIMENG_VIDEO_VERSION == "3.5pro":
-            pro_req_key = JIMENG_V35_PRO_REQ_KEYS["1080p"]["first_frame"]
-            if pro_req_key not in req_keys:
-                req_keys.append(pro_req_key)
-        
-        # 3.0pro 版本的所有 req_key（兼容旧任务和所有场景）
-        all_v30_keys = [
-            JIMENG_V30_REQ_KEYS["720p"]["first_frame"],
-            JIMENG_V30_REQ_KEYS["720p"]["first_last_frame"],
-            JIMENG_V30_REQ_KEYS["1080p"]["first_frame"],
-            JIMENG_V30_REQ_KEYS["1080p"]["first_last_frame"]
-        ]
-        for key in all_v30_keys:
-            if key not in req_keys:
-                req_keys.append(key)
+        pro_req_key = JIMENG_V35_PRO_REQ_KEYS["1080p"]["first_frame"]
+        if pro_req_key not in req_keys:
+            req_keys.append(pro_req_key)
         
         print(f"🔍 将尝试以下 req_key 查询任务状态: {req_keys}")
         

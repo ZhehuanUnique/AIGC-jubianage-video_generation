@@ -52,6 +52,7 @@ def submit_video_task(
         API 响应结果
     """
     # 构建请求参数
+    # 注意：binary_data_base64 必须是字符串列表，每个元素是base64编码的图片数据
     params = {
         "req_key": req_key,
         "prompt": prompt,
@@ -60,18 +61,44 @@ def submit_video_task(
     }
     
     # 添加图片输入（二选一）
+    # 确保 binary_data_base64 是列表格式，且每个元素都是字符串
     if binary_data_base64:
-        params["binary_data_base64"] = binary_data_base64
+        # 确保是列表且每个元素都是字符串
+        if isinstance(binary_data_base64, list):
+            # 过滤掉空值，确保所有元素都是非空字符串
+            binary_data_base64 = [str(item) for item in binary_data_base64 if item]
+            if binary_data_base64:
+                params["binary_data_base64"] = binary_data_base64
+        else:
+            # 如果不是列表，转换为列表
+            params["binary_data_base64"] = [str(binary_data_base64)]
     elif image_urls:
-        params["image_urls"] = image_urls
+        # 确保 image_urls 是列表格式
+        if isinstance(image_urls, list):
+            image_urls = [str(url) for url in image_urls if url]
+            if image_urls:
+                params["image_urls"] = image_urls
+        else:
+            params["image_urls"] = [str(image_urls)]
     
     # 使用官方 SDK 的 cv_sync2async_submit_task 方法
     # SDK 会自动处理签名、Action、Version 等参数
     try:
+        # 打印调试信息
+        print(f"[DEBUG] 提交参数: req_key={req_key}, prompt长度={len(prompt)}, frames={frames}, seed={seed}")
+        print(f"[DEBUG] 图片数据: binary_data_base64={bool(params.get('binary_data_base64'))}, image_urls={bool(params.get('image_urls'))}")
+        if params.get("binary_data_base64"):
+            print(f"[DEBUG] binary_data_base64 数量: {len(params['binary_data_base64'])}, 第一张长度: {len(params['binary_data_base64'][0]) if params['binary_data_base64'] else 0}")
+        
         response = service.cv_sync2async_submit_task(params)
         return response
     except Exception as e:
-        raise Exception(f"调用即梦 API 失败: {str(e)}")
+        error_msg = str(e)
+        print(f"[ERROR] SDK 调用失败: {error_msg}")
+        # 如果是解析错误，提供更详细的错误信息
+        if "parsing" in error_msg.lower() or "parse" in error_msg.lower():
+            raise Exception(f"调用即梦 API 失败: 请求参数解析错误 - {error_msg}。请检查 binary_data_base64 格式是否正确（应为base64字符串列表）")
+        raise Exception(f"调用即梦 API 失败: {error_msg}")
 
 
 def query_video_task(
