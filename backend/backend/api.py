@@ -277,8 +277,14 @@ async def generate_video(
             else:
                 # base64 数据，移除 data:image/...;base64, 前缀
                 base64_data = request.first_frame
+                
+                # 移除 data:image/...;base64, 前缀（如果有）
                 if "," in base64_data:
-                    base64_data = base64_data.split(",")[1]
+                    # 找到最后一个逗号，取后面的部分
+                    base64_data = base64_data.split(",")[-1]
+                elif "base64," in base64_data:
+                    base64_data = base64_data.split("base64,")[-1]
+                
                 # 验证 base64 数据格式
                 if not base64_data or len(base64_data) < 100:
                     return VideoGenerationResponse(
@@ -286,9 +292,29 @@ async def generate_video(
                         message="首帧图片数据无效",
                         error="首帧图片 base64 数据格式不正确或数据过短"
                     )
-                # 确保 base64 数据是纯字符串（移除可能的换行符和空格）
-                base64_data = base64_data.strip().replace("\n", "").replace("\r", "").replace(" ", "")
+                
+                # 确保 base64 数据是纯字符串（移除可能的换行符、空格和其他空白字符）
+                base64_data = base64_data.strip()
+                # 移除所有空白字符（包括换行符、制表符等）
+                import re
+                base64_data = re.sub(r'\s+', '', base64_data)
+                
+                # 验证 base64 字符集（只包含 A-Z, a-z, 0-9, +, /, =）
+                if not re.match(r'^[A-Za-z0-9+/=]+$', base64_data):
+                    return VideoGenerationResponse(
+                        success=False,
+                        message="首帧图片数据格式错误",
+                        error="base64 数据包含非法字符"
+                    )
+                
+                # 验证 base64 长度（必须是4的倍数，或者末尾有=填充）
+                if len(base64_data) % 4 != 0:
+                    # 自动补齐 = 填充
+                    padding = 4 - (len(base64_data) % 4)
+                    base64_data += "=" * padding
+                
                 binary_data_base64.append(base64_data)
+                print(f"[DEBUG] 处理后的 base64 数据长度: {len(base64_data)}, 前50字符: {base64_data[:50]}")
         
         # 3.5pro 不支持尾帧，如果传入了尾帧会在前面验证时返回错误
         # 这里不再处理尾帧
